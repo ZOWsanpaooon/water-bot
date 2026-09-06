@@ -34,8 +34,10 @@ class TestWaterBotIndependent(unittest.TestCase):
 
     def test_parser(self):
         self.assertEqual(parse_water_message('10ゴク', 25), (250, 10))
-        self.assertEqual(parse_water_message('+250ml'), (250, None))
+        self.assertEqual(parse_water_message('+250ml', 25), (250, 10))
         self.assertEqual(parse_water_message('300'), (300, None))
+        self.assertEqual(parse_water_message('一口', 25), (25, 1))
+        self.assertEqual(parse_water_message('コップ1杯', 25), (200, 8))
 
     def test_db_and_calculator(self):
         user = self.db.get_or_create_user('u1', 'ゆうと')

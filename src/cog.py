@@ -74,17 +74,25 @@ class WaterCog(commands.Cog):
         if message.author.bot:
             return
 
-        settings = self.db.get_all_channel_settings()
-        is_water_channel = any(s.channel_id == message.channel.id for s in settings)
         is_dm = isinstance(message.channel, discord.DMChannel)
+        settings = self.db.get_all_channel_settings()
+        is_registered_channel = any(s.channel_id == message.channel.id for s in settings)
+        ch_name = getattr(message.channel, "name", "").lower()
+        is_named_water_channel = any(w in ch_name for w in ["水", "water", "水分", "bot", "のんだ"])
 
-        if not (is_water_channel or is_dm):
-            return
+        is_water_context = is_dm or is_registered_channel or is_named_water_channel
 
         user = self.db.get_or_create_user(str(message.author.id), message.author.display_name)
         parsed = parse_water_message(message.content, user_gulp_ml=user.gulp_ml)
         if not parsed:
             return
+
+        # 一般チャンネルでの誤爆防止: 明確な水分キーワードが含まれている場合のみ感知
+        if not is_water_context:
+            text = message.content.lower()
+            has_water_keyword = any(k in text for k in ["ごく", "ゴク", "口", "ml", "ミリ", "cc", "杯", "本", "水", "飲", "茶", "アクエ", "ポカリ"])
+            if not has_water_keyword:
+                return
 
         amount_ml, gulp_count = parsed
         log, progress = self.db.add_log(
@@ -95,7 +103,7 @@ class WaterCog(commands.Cog):
             user_name=message.author.display_name
         )
 
-        if is_water_channel:
+        if is_water_context and not is_dm:
             try:
                 await message.delete()
             except Exception:

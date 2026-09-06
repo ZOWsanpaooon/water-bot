@@ -127,24 +127,8 @@ class WaterDatabase:
                 )
             """)
 
-        now = get_current_jst_time()
-        today_key = self.calculate_date_key(now, "06:00")
-
-        # ゆうとのログがなければ前回値(1890ml)をシード
-        cursor.execute("SELECT count(*) FROM water_logs WHERE user_id = '1236356506123894937' AND date_key = ?", (today_key,))
-        if cursor.fetchone()[0] == 0:
-            cursor.execute("""
-                INSERT INTO water_logs (user_id, amount_ml, recorded_at, date_key, source)
-                VALUES ('1236356506123894937', 1890, ?, ?, 'restore')
-            """, (f"{today_key}T21:53:00+09:00", today_key))
-
-        # れんのログがなければ前回値(1480ml)をシード
-        cursor.execute("SELECT count(*) FROM water_logs WHERE user_id = '1023600562907926680' AND date_key = ?", (today_key,))
-        if cursor.fetchone()[0] == 0:
-            cursor.execute("""
-                INSERT INTO water_logs (user_id, amount_ml, recorded_at, date_key, source)
-                VALUES ('1023600562907926680', 1480, ?, ?, 'restore')
-            """, (f"{today_key}T22:48:00+09:00", today_key))
+        # Supabase連携が完了したため、固定の初期水分ログのシードは行わない（Supabaseから復元）
+        pass
 
     @staticmethod
     def calculate_date_key(dt: datetime, reset_time_str: str = "06:00") -> str:

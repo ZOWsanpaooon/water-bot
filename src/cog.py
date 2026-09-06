@@ -5,6 +5,7 @@ DM通知 & チャンネル通知、スラッシュコマンド /water-channel、
 
 import asyncio
 import os
+import aiohttp
 from datetime import datetime, time, timedelta
 from typing import Dict, Optional
 import discord
@@ -41,6 +42,7 @@ class WaterCog(commands.Cog):
         )
 
         self.water_background_task.start()
+        self.render_keepalive_task.start()
 
     async def cog_load(self) -> None:
         self.bot.add_view(self.panel_view)
@@ -51,6 +53,7 @@ class WaterCog(commands.Cog):
 
     def cog_unload(self) -> None:
         self.water_background_task.cancel()
+        self.render_keepalive_task.cancel()
         asyncio.create_task(self.api_server.stop())
 
     @commands.Cog.listener()
@@ -276,6 +279,22 @@ class WaterCog(commands.Cog):
 
     @water_background_task.before_loop
     async def before_water_task(self) -> None:
+        await self.bot.wait_until_ready()
+
+    @tasks.loop(minutes=10)
+    async def render_keepalive_task(self) -> None:
+        """Render無料プランのスリープ(15分無通信)を防止するための自己Ping"""
+        render_url = os.getenv("RENDER_EXTERNAL_URL") or "https://shui-hayabeedaro.onrender.com"
+        target_url = f"{render_url.rstrip('/')}/api/health"
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(target_url, timeout=aiohttp.ClientTimeout(total=5)) as resp:
+                    pass
+        except Exception:
+            pass
+
+    @render_keepalive_task.before_loop
+    async def before_render_keepalive(self) -> None:
         await self.bot.wait_until_ready()
 
     async def _send_user_reminder(self, user, progress) -> None:

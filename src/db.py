@@ -92,7 +92,59 @@ class WaterDatabase:
 
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_water_logs_user_date ON water_logs(user_id, date_key)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_water_logs_recorded_at ON water_logs(recorded_at)")
+            self._seed_initial_defaults(cursor)
             conn.commit()
+
+    def _seed_initial_defaults(self, cursor: sqlite3.Cursor) -> None:
+        """Render等のエフェメラル環境でも初期プロファイルと前回の水分量が絶対に消えないように自動シード"""
+        cursor.execute("SELECT count(*) FROM users WHERE user_id = '1236356506123894937'")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+                INSERT OR REPLACE INTO users (
+                    user_id, name, daily_goal_ml, gulp_ml, reset_time,
+                    notification_enabled, notification_start, notification_end,
+                    notification_interval, notification_mode, presets, visibility,
+                    gender, age, height_cm, weight_kg, bedtime, activity_level, auto_goal_enabled
+                ) VALUES (
+                    '1236356506123894937', 'ゆうと', 2050, 25, '06:00',
+                    1, '08:00', '23:00', 60, 'dm', '[100, 250, 500]', 'all',
+                    'male', 25, 165.0, 66.0, '03:30', 'medium', 0
+                )
+            """)
+
+        cursor.execute("SELECT count(*) FROM users WHERE user_id = '1023600562907926680'")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+                INSERT OR REPLACE INTO users (
+                    user_id, name, daily_goal_ml, gulp_ml, reset_time,
+                    notification_enabled, notification_start, notification_end,
+                    notification_interval, notification_mode, presets, visibility,
+                    gender, age, height_cm, weight_kg, bedtime, activity_level, auto_goal_enabled
+                ) VALUES (
+                    '1023600562907926680', 'れん', 2050, 20, '06:00',
+                    1, '08:00', '23:00', 60, 'dm', '[100, 250, 500]', 'all',
+                    'female', 23, 158.0, 48.0, '03:30', 'medium', 0
+                )
+            """)
+
+        now = get_current_jst_time()
+        today_key = self.calculate_date_key(now, "06:00")
+
+        # ゆうとのログがなければ前回値(1890ml)をシード
+        cursor.execute("SELECT count(*) FROM water_logs WHERE user_id = '1236356506123894937' AND date_key = ?", (today_key,))
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+                INSERT INTO water_logs (user_id, amount_ml, recorded_at, date_key, source)
+                VALUES ('1236356506123894937', 1890, ?, ?, 'restore')
+            """, (f"{today_key}T21:53:00+09:00", today_key))
+
+        # れんのログがなければ前回値(1480ml)をシード
+        cursor.execute("SELECT count(*) FROM water_logs WHERE user_id = '1023600562907926680' AND date_key = ?", (today_key,))
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+                INSERT INTO water_logs (user_id, amount_ml, recorded_at, date_key, source)
+                VALUES ('1023600562907926680', 1480, ?, ?, 'restore')
+            """, (f"{today_key}T22:48:00+09:00", today_key))
 
     @staticmethod
     def calculate_date_key(dt: datetime, reset_time_str: str = "06:00") -> str:

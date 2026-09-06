@@ -38,6 +38,7 @@ class SupabaseWaterClient:
                 async with session.get(f"{self.url}/rest/v1/water_logs?select=*&order=id.desc&limit=200", headers=self._headers()) as resp:
                     if resp.status == 200:
                         cloud_logs = await resp.json()
+                        print(f"[Supabase] クラウドから {len(cloud_logs)} 件のログを取得")
                         from src.sync import WaterSyncManager
                         sync_mgr = WaterSyncManager(local_db)
                         user_logs_map = {}
@@ -54,8 +55,11 @@ class SupabaseWaterClient:
                             res = sync_mgr.sync_batch_logs(uid, logs)
                             imported += res["imported_count"]
                         return imported
+                    else:
+                        body = await resp.text()
+                        print(f"[Supabase] ❌ ログ取得失敗 (HTTP {resp.status}): {body}")
         except Exception as e:
-            print(f"[Supabase] ログ復元エラー: {e}")
+            print(f"[Supabase] ❌ ログ復元エラー: {e}")
         return 0
 
     async def sync_users_from_cloud(self, local_db) -> None:
@@ -67,6 +71,7 @@ class SupabaseWaterClient:
                 async with session.get(f"{self.url}/rest/v1/users?select=*", headers=self._headers()) as resp:
                     if resp.status == 200:
                         users_data = await resp.json()
+                        print(f"[Supabase] クラウドから {len(users_data)} ユーザーを取得")
                         for u_data in users_data:
                             presets = u_data.get("presets", [100, 250, 500])
                             if isinstance(presets, str):
@@ -96,8 +101,12 @@ class SupabaseWaterClient:
                                 auto_goal_enabled=bool(u_data.get("auto_goal_enabled", 1))
                             )
                             local_db.save_user(u)
+                            print(f"[Supabase]   復元: {u.name} (gulp_ml={u.gulp_ml}, goal={u.daily_goal_ml}ml)")
+                    else:
+                        body = await resp.text()
+                        print(f"[Supabase] ❌ ユーザー取得失敗 (HTTP {resp.status}): {body}")
         except Exception as e:
-            print(f"[Supabase] ユーザー復元エラー: {e}")
+            print(f"[Supabase] ❌ ユーザー復元エラー: {e}")
 
     async def upload_log(self, user_id: str, amount_ml: int, gulp_count: Optional[int], recorded_at: datetime, date_key: str, source: str) -> None:
         """ローカルで記録された水分ログをクラウドへ非同期アップロード"""
@@ -114,9 +123,13 @@ class SupabaseWaterClient:
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(f"{self.url}/rest/v1/water_logs", headers=self._headers(), json=payload) as resp:
-                    pass
+                    if resp.status in (200, 201):
+                        print(f"[Supabase] ✅ ログ保存成功: user={user_id}, {amount_ml}ml")
+                    else:
+                        body = await resp.text()
+                        print(f"[Supabase] ❌ ログ保存失敗 (HTTP {resp.status}): {body}")
         except Exception as e:
-            print(f"[Supabase] ログ保存エラー: {e}")
+            print(f"[Supabase] ❌ ログ保存エラー: {e}")
 
     async def upload_user(self, user: UserSetting) -> None:
         """ローカルで更新されたユーザープロフィールをクラウドへアップロード"""
@@ -148,6 +161,10 @@ class SupabaseWaterClient:
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(f"{self.url}/rest/v1/users", headers=headers, json=payload) as resp:
-                    pass
+                    if resp.status in (200, 201):
+                        print(f"[Supabase] ✅ ユーザー保存成功: {user.name} ({user.user_id})")
+                    else:
+                        body = await resp.text()
+                        print(f"[Supabase] ❌ ユーザー保存失敗 (HTTP {resp.status}): {body}")
         except Exception as e:
-            print(f"[Supabase] ユーザー保存エラー: {e}")
+            print(f"[Supabase] ❌ ユーザー保存エラー: {e}")

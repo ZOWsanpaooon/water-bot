@@ -60,11 +60,24 @@ class WaterCog(commands.Cog):
     async def on_ready(self) -> None:
         print("[WaterCog] 水分管理Botが正常に起動しました (24時間クラウド稼働モード)")
 
-        # クラウド同期 (Supabase)
+        # Supabase接続状況を明示的にログ出力
+        if self.cloud_client.enabled:
+            print(f"[WaterCog] ✅ Supabase接続: 有効 (URL={self.cloud_client.url[:40]}...)")
+        else:
+            print("[WaterCog] ⚠️ Supabase接続: 無効 (SUPABASE_URL/SUPABASE_KEY未設定)")
+
+        # クラウド同期 (Supabase → ローカル)
         if self.cloud_client.enabled:
             imported = await self.cloud_client.sync_from_cloud(self.db)
             if imported > 0:
-                print(f"[WaterCog] Supabaseから {imported} 件のデータを同期しました。")
+                print(f"[WaterCog] Supabaseから {imported} 件のログを同期しました。")
+
+            # ローカル → クラウド (シードデータ含む全ユーザーをアップロード)
+            local_users = self.db.get_all_users()
+            for u in local_users:
+                await self.cloud_client.upload_user(u)
+            if local_users:
+                print(f"[WaterCog] ローカルの {len(local_users)} ユーザーをSupabaseへ同期しました。")
 
         # パネル最新化
         await self.refresh_all_panels()

@@ -34,6 +34,13 @@ class WaterPanelView(ui.View):
         gulp_count: Optional[int] = None,
         source: str = "discord"
     ) -> None:
+        # 3秒タイムアウトを即座に防止
+        try:
+            if not interaction.response.is_done():
+                await interaction.response.defer(ephemeral=True)
+        except Exception:
+            pass
+
         user_id = str(interaction.user.id)
         user_name = interaction.user.display_name
 
@@ -51,7 +58,7 @@ class WaterPanelView(ui.View):
 
         if interaction.message:
             try:
-                await interaction.response.edit_message(embed=embed, view=self)
+                await interaction.message.edit(embed=embed, view=self)
             except Exception:
                 pass
 
@@ -60,10 +67,10 @@ class WaterPanelView(ui.View):
         if progress.is_first_achievement:
             feedback += "\n\n🎉 **おめでとうございます！今日の水分目標を達成しました！** 🥳✨"
 
-        if not interaction.response.is_done():
-            await interaction.response.send_message(feedback, ephemeral=True)
-        else:
+        try:
             await interaction.followup.send(feedback, ephemeral=True)
+        except Exception:
+            pass
 
         if self.cog:
             self.cog.backup_log_to_cloud(log)
@@ -97,13 +104,21 @@ class WaterPanelView(ui.View):
 
     @ui.button(label="履歴", style=discord.ButtonStyle.secondary, emoji="📊", custom_id="water:history", row=1)
     async def history_button(self, interaction: discord.Interaction, button: ui.Button):
+        try:
+            if not interaction.response.is_done():
+                await interaction.response.defer(ephemeral=True)
+        except Exception:
+            pass
         user_id = str(interaction.user.id)
         user_name = interaction.user.display_name
         self.db.get_or_create_user(user_id, user_name)
         progress = self.db.get_daily_progress(user_id)
         stats = self.analytics.get_comprehensive_stats(user_id)
         embed = build_history_embed(progress, stats)
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        try:
+            await interaction.followup.send(embed=embed, ephemeral=True)
+        except Exception:
+            pass
 
     @ui.button(label="取り消す", style=discord.ButtonStyle.danger, emoji="↩️", custom_id="water:undo", row=1)
     async def undo_button(self, interaction: discord.Interaction, button: ui.Button):

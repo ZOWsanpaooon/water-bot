@@ -196,8 +196,11 @@ class WaterCog(commands.Cog):
             await interaction.response.send_message("❌ このコマンドはサーバー内のテキストチャンネルで実行してください。", ephemeral=True)
             return
 
+        # 3秒タイムアウトを防ぐため即座にdefer
+        await interaction.response.defer(ephemeral=True)
+
         async def respond(text: str):
-            await interaction.response.send_message(text, ephemeral=True)
+            await interaction.followup.send(text, ephemeral=True)
 
         await self._setup_water_panel(channel, interaction.user, respond)
 

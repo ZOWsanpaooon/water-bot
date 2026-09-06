@@ -62,9 +62,9 @@ class WaterCog(commands.Cog):
 
         # Supabase接続状況を明示的にログ出力
         if self.cloud_client.enabled:
-            print(f"[WaterCog] ✅ Supabase接続: 有効 (URL={self.cloud_client.url[:40]}...)")
+            print(f"[WaterCog] [OK] Supabase enabled (URL={self.cloud_client.url[:40]}...)")
         else:
-            print("[WaterCog] ⚠️ Supabase接続: 無効 (SUPABASE_URL/SUPABASE_KEY未設定)")
+            print("[WaterCog] [WARN] Supabase disabled (SUPABASE_URL/SUPABASE_KEY not set)")
 
         # クラウド同期 (Supabase → ローカル)
         if self.cloud_client.enabled:

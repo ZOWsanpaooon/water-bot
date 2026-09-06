@@ -57,9 +57,9 @@ class SupabaseWaterClient:
                         return imported
                     else:
                         body = await resp.text()
-                        print(f"[Supabase] ❌ ログ取得失敗 (HTTP {resp.status}): {body}")
+                        print(f"[Supabase] [FAIL] Logs fetch failed (HTTP {resp.status}): {body}")
         except Exception as e:
-            print(f"[Supabase] ❌ ログ復元エラー: {e}")
+            print(f"[Supabase] [ERROR] Logs sync error: {e}")
         return 0
 
     async def sync_users_from_cloud(self, local_db) -> None:
@@ -104,9 +104,9 @@ class SupabaseWaterClient:
                             print(f"[Supabase]   復元: {u.name} (gulp_ml={u.gulp_ml}, goal={u.daily_goal_ml}ml)")
                     else:
                         body = await resp.text()
-                        print(f"[Supabase] ❌ ユーザー取得失敗 (HTTP {resp.status}): {body}")
+                        print(f"[Supabase] [FAIL] Users fetch failed (HTTP {resp.status}): {body}")
         except Exception as e:
-            print(f"[Supabase] ❌ ユーザー復元エラー: {e}")
+            print(f"[Supabase] [ERROR] Users sync error: {e}")
 
     async def upload_log(self, user_id: str, amount_ml: int, gulp_count: Optional[int], recorded_at: datetime, date_key: str, source: str) -> None:
         """ローカルで記録された水分ログをクラウドへ非同期アップロード"""
@@ -124,12 +124,12 @@ class SupabaseWaterClient:
             async with aiohttp.ClientSession() as session:
                 async with session.post(f"{self.url}/rest/v1/water_logs", headers=self._headers(), json=payload) as resp:
                     if resp.status in (200, 201):
-                        print(f"[Supabase] ✅ ログ保存成功: user={user_id}, {amount_ml}ml")
+                        print(f"[Supabase] [OK] Log saved: user={user_id}, {amount_ml}ml")
                     else:
                         body = await resp.text()
-                        print(f"[Supabase] ❌ ログ保存失敗 (HTTP {resp.status}): {body}")
+                        print(f"[Supabase] [FAIL] Log save failed (HTTP {resp.status}): {body}")
         except Exception as e:
-            print(f"[Supabase] ❌ ログ保存エラー: {e}")
+            print(f"[Supabase] [ERROR] Log save exception: {e}")
 
     async def upload_user(self, user: UserSetting) -> None:
         """ローカルで更新されたユーザープロフィールをクラウドへアップロード"""
@@ -162,9 +162,9 @@ class SupabaseWaterClient:
             async with aiohttp.ClientSession() as session:
                 async with session.post(f"{self.url}/rest/v1/users", headers=headers, json=payload) as resp:
                     if resp.status in (200, 201):
-                        print(f"[Supabase] ✅ ユーザー保存成功: {user.name} ({user.user_id})")
+                        print(f"[Supabase] [OK] User saved: {user.name} ({user.user_id})")
                     else:
                         body = await resp.text()
-                        print(f"[Supabase] ❌ ユーザー保存失敗 (HTTP {resp.status}): {body}")
+                        print(f"[Supabase] [FAIL] User save failed (HTTP {resp.status}): {body}")
         except Exception as e:
-            print(f"[Supabase] ❌ ユーザー保存エラー: {e}")
+            print(f"[Supabase] [ERROR] User save exception: {e}")
